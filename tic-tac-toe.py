@@ -1,12 +1,14 @@
 import random
 import numpy as np
 
-# X = -1
-# O = 1
-# blank = 0
+# X = 1
+# O = 2
+# . = 0
 
 step_size = 0.1
 states = {}
+control_player = 1
+experiment_player = 2
 
 """
 state = np.zeros((3,3))
@@ -18,8 +20,6 @@ for i in range(3):
 states.add()
 """
 
-state = np.zeros((3,3))
-states[state.tobytes()] = 0.5
 
 def human_input(state):
     row = input("\nrow: ")
@@ -39,7 +39,8 @@ def agent_action(state, agent, symbol):
         return action
     elif agent == "greedy":
         greedy_action, next_state = get_greedy_action(state, symbol)
-        # update value of current state
+        add_new_state(state) # just in case
+        # temporal difference: update value of current state
         states[state.tobytes()] = states[state.tobytes()] + (step_size * (states[next_state.tobytes()] - states[state.tobytes()]))
         return greedy_action
     elif agent == "e-greedy":
@@ -51,9 +52,9 @@ def agent_action(state, agent, symbol):
 
 def get_greedy_action(state, symbol):
         candidate_actions = get_available_actions(state)
-        print(f"candidate_actions:\n{candidate_actions}\n")
+        #print(f"candidate_actions:\n{candidate_actions}\n")
         max_value = -np.inf
-        max_value_action = (0,0)
+        max_value_action = random.choice(candidate_actions)
         max_value_state = np.copy(state)
         for candidate_action in candidate_actions:
             candidate_state = np.copy(state)
@@ -63,21 +64,23 @@ def get_greedy_action(state, symbol):
             if value > max_value:
                 max_value = value
                 max_value_action = candidate_action
-                max_value_state[max_value_action] = symbol
-        print(f"max_value_action: {max_value_action}")
-        print(f"max_value_state:\n{max_value_state}\n")
+                max_value_state = candidate_state
+        #print(f"max_value_action: {max_value_action}")
+        #print(f"max_value_state:\n{max_value_state}\n")
         return max_value_action, max_value_state
 
 def add_new_state(state):
-    if is_terminal_state(state):
-        states[state.tobytes()] = 1.0 #TODO distinguish between players
+    if is_win(state, experiment_player):
+        states[state.tobytes()] = 1.0
+    elif is_win(state, control_player):
+        states[state.tobytes()] = 0.0
     elif state.tobytes() not in states:
         states[state.tobytes()] = 0.5
 
 def action(square, action, pre_state):
     result_state = np.copy(pre_state)
     result_state[square] = action
-    states[result_state.tobytes()] = 0.5
+    #states[result_state.tobytes()] = 0.5
     return result_state 
 
 def get_available_actions(state):
@@ -99,18 +102,43 @@ def render(state):
     
 def is_terminal_state(state):
     #TODO diagonals
-    return any((state[:]==[1,1,1]).all(1)) or any((state.T[:]==[1,1,1]).all(1)) or (np.sum(np.where(state == 0)) == 0)
+    #print(state)
+    return is_win(state, 1) or is_win(state, 2) or (np.sum(np.where(state == 0)) == 0)
 
-N_GAMES = 3
+def is_win(state, _id):
+    diags = list(zip(list(np.where(np.identity(3)==1)[0]), list(np.where(np.identity(3)==1)[1])))
+    diag_win = True
+    for diag in diags:
+        if state[diag] != _id:
+            diag_win = False
+            break
+    if diag_win:
+        return True
+    diags = list(zip(list(np.where(np.rot90(np.identity(3))==1)[0]), list(np.where(np.rot90(np.identity(3))==1)[1])))
+    diag_win = True
+    for diag in diags:
+        if state[diag] != _id:
+            diag_win = False
+            break
+    if diag_win:
+        return True
+    
+    return any((state[:]==[_id,_id,_id]).all(1)) or any((state.T[:]==[_id,_id,_id]).all(1))
+
+state = np.zeros((3,3))
+states[state.tobytes()] = 0.5
+N_GAMES = 100
 for game in range(N_GAMES):
-    print(f"GAME {game}")
+    print(f"GAME {game+1}")
+    state = np.zeros((3,3))
     game_over = False
     while not game_over:
-        state = action(agent_action(state, "random", 1), 1, state)
+        state = action(agent_action(state, "random", control_player), control_player, state)
+        #state = action(human_input(state), control_player, state)
         render(state)
         if is_terminal_state(state):
             break
-        state = action(agent_action(state, "greedy", 2), 2, state)
+        state = action(agent_action(state, "greedy", experiment_player), experiment_player, state)
         render(state)
         game_over = is_terminal_state(state)
     print("GAME OVER!")
