@@ -6,51 +6,46 @@ import numpy as np
 # . = 0
 
 step_size = 0.1
-states = {}
+policy = {}
 control_player = 1
 experiment_player = 2
+experiment_wins = 0
+experiment_losses = 0
+interactive = False
+epsilon = 0.5
 
-"""
-state = np.zeros((3,3))
-for i in range(3):
-    for j in range(3):
-        for action in range(3):
-            state[i,j] = action
-            states.add(np.copy(state))
-states.add()
-"""
-
+def myprint(string):
+    if interactive:
+        print(string)
 
 def human_input(state):
     row = input("\nrow: ")
     col = input("\ncol: ")
-    while state[int(row), int(col)] != 0:
+    while int(row) > 2 or int(row) < 0 or int(col) > 2 or int(col) < 0 or state[int(row), int(col)] != 0:
         print("Invalid!")
         row = input("\nrow: ")
         col = input("\ncol: ")
 
     return int(row), int(col)
 
-def agent_action(state, agent, symbol):
+def agent_action(state, agent, player_id, past_state=None):
     if agent == "random":
         action = random.randint(0,2), random.randint(0,2)
         while state[action] != 0:
             action = random.randint(0,2), random.randint(0,2)
         return action
-    elif agent == "greedy":
-        greedy_action, next_state = get_greedy_action(state, symbol)
+    else:
+        greedy_action, next_state = get_greedy_action(state, player_id)
+        add_new_state(past_state) # just in case
         add_new_state(state) # just in case
+        if agent == "e-greedy":
+            if random.random() <= epsilon:
+                return random.choice(get_available_actions(state)) #TODO can this be the highest value action?
         # temporal difference: update value of current state
-        states[state.tobytes()] = states[state.tobytes()] + (step_size * (states[next_state.tobytes()] - states[state.tobytes()]))
+        policy[past_state.tobytes()] = policy[past_state.tobytes()] + (step_size * (policy[next_state.tobytes()] - policy[past_state.tobytes()]))
         return greedy_action
-    elif agent == "e-greedy":
-        greedy_action = get_greedy_action(state, symbol)
-        if random.random() > 0.1: # TODO add e parameter
-            return greedy_action
-        else:
-            return random.choice(get_available_actions(state)) #TODO can this be the highest value action?
 
-def get_greedy_action(state, symbol):
+def get_greedy_action(state, player_id):
         candidate_actions = get_available_actions(state)
         #print(f"candidate_actions:\n{candidate_actions}\n")
         max_value = -np.inf
@@ -58,9 +53,9 @@ def get_greedy_action(state, symbol):
         max_value_state = np.copy(state)
         for candidate_action in candidate_actions:
             candidate_state = np.copy(state)
-            candidate_state[candidate_action] = symbol
+            candidate_state[candidate_action] = player_id
             add_new_state(candidate_state)
-            value = states[candidate_state.tobytes()]
+            value = policy[candidate_state.tobytes()]
             if value > max_value:
                 max_value = value
                 max_value_action = candidate_action
@@ -70,35 +65,38 @@ def get_greedy_action(state, symbol):
         return max_value_action, max_value_state
 
 def add_new_state(state):
+    if state is None:
+        return
     if is_win(state, experiment_player):
-        states[state.tobytes()] = 1.0
+        policy[state.tobytes()] = 1.0
     elif is_win(state, control_player):
-        states[state.tobytes()] = 0.0
-    elif state.tobytes() not in states:
-        states[state.tobytes()] = 0.5
+        policy[state.tobytes()] = 0.0
+    elif state.tobytes() not in policy:
+        policy[state.tobytes()] = 0.5
 
 def action(square, action, pre_state):
     result_state = np.copy(pre_state)
     result_state[square] = action
-    #states[result_state.tobytes()] = 0.5
+    #policy[result_state.tobytes()] = 0.5
     return result_state 
 
 def get_available_actions(state):
     return list(zip(list(np.where(state==0)[0]) ,list(np.where(state==0)[1])))
 
 def render(state):
-    i = 0
-    for cell in np.nditer(state.T):
-        if cell == 0:
-            print(". ", end="")
-        if cell == 1:
-            print("X ", end="")
-        if cell == 2:
-            print("O ", end="")
-        i += 1
-        if i % 3 == 0:
-            print("")
-    print("\n")
+    if interactive:
+        i = 0
+        for cell in np.nditer(state.T):
+            if cell == 0:
+                print(". ", end="")
+            if cell == 1:
+                print("X ", end="")
+            if cell == 2:
+                print("O ", end="")
+            i += 1
+            if i % 3 == 0:
+                print("")
+        print("\n")
     
 def is_terminal_state(state):
     #TODO diagonals
@@ -115,20 +113,33 @@ def is_win(state, _id):
     return any((state[:]==[_id,_id,_id]).all(1)) or any((state.T[:]==[_id,_id,_id]).all(1))
 
 state = np.zeros((3,3))
-states[state.tobytes()] = 0.5
-N_GAMES = 100
+policy[state.tobytes()] = 0.5
+N_GAMES = 10000
 for game in range(N_GAMES):
-    print(f"\nGAME {game+1}")
+    myprint(f"\nGAME {game+1}")
     state = np.zeros((3,3))
+    history = {}
     game_over = False
+    time = 0
     while not game_over:
-        #state = action(agent_action(state, "random", control_player), control_player, state)
-        state = action(human_input(state), control_player, state)
+        state = action(agent_action(state, "random", control_player), control_player, state)
+        history[time] = state
+        time += 1
+        #state = action(human_input(state), control_player, state)
         render(state)
         if is_terminal_state(state):
             break
-        state = action(agent_action(state, "greedy", experiment_player), experiment_player, state)
+        state = action(agent_action(state, "e-greedy", experiment_player, past_state=history[time-1]), experiment_player, state)
+        history[time] = state
+        time += 1
         render(state)
         game_over = is_terminal_state(state)
-    print("GAME OVER!")
-print(states.values())
+    if is_win(state, experiment_player):
+        experiment_wins += 1
+    else:
+        experiment_losses += 1
+    myprint("GAME OVER!")
+    myprint(f"Winrate: {experiment_wins/(experiment_wins+experiment_losses)}")
+print(policy.values())
+print(len(policy))
+print(f"Winrate: {experiment_wins/(experiment_wins+experiment_losses)}")
