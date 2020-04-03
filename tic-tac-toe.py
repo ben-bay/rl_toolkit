@@ -5,14 +5,14 @@ import numpy as np
 # O = 2
 # . = 0
 
-step_size = 0.1
+step_size = 0.001
 policy = {}
 control_player = 1
 experiment_player = 2
 experiment_wins = 0
 experiment_losses = 0
-interactive = False
-epsilon = 0.5
+interactive = True
+epsilon = 0.1
 
 def myprint(string):
     if interactive:
@@ -29,6 +29,7 @@ def human_input(state):
     return int(row), int(col)
 
 def agent_action(state, agent, player_id, past_state=None):
+    add_new_state(state) # just in case
     if agent == "random":
         action = random.randint(0,2), random.randint(0,2)
         while state[action] != 0:
@@ -37,7 +38,6 @@ def agent_action(state, agent, player_id, past_state=None):
     else:
         greedy_action, next_state = get_greedy_action(state, player_id)
         add_new_state(past_state) # just in case
-        add_new_state(state) # just in case
         if agent == "e-greedy":
             if random.random() <= epsilon:
                 return random.choice(get_available_actions(state)) #TODO can this be the highest value action?
@@ -70,14 +70,14 @@ def add_new_state(state):
     if is_win(state, experiment_player):
         policy[state.tobytes()] = 1.0
     elif is_win(state, control_player):
+        print("win for control player")
         policy[state.tobytes()] = 0.0
-    elif state.tobytes() not in policy:
+    elif state.tobytes() not in policy.keys():
         policy[state.tobytes()] = 0.5
 
 def action(square, action, pre_state):
     result_state = np.copy(pre_state)
     result_state[square] = action
-    #policy[result_state.tobytes()] = 0.5
     return result_state 
 
 def get_available_actions(state):
@@ -99,8 +99,6 @@ def render(state):
         print("\n")
     
 def is_terminal_state(state):
-    #TODO diagonals
-    #print(state)
     return is_win(state, 1) or is_win(state, 2) or (np.sum(np.where(state == 0)) == 0)
 
 def is_win(state, _id):
@@ -114,24 +112,26 @@ def is_win(state, _id):
 
 state = np.zeros((3,3))
 policy[state.tobytes()] = 0.5
-N_GAMES = 10000
+N_GAMES = 100000
 for game in range(N_GAMES):
     myprint(f"\nGAME {game+1}")
     state = np.zeros((3,3))
     history = {}
     game_over = False
     time = 0
+    history[time] = state
     while not game_over:
-        state = action(agent_action(state, "random", control_player), control_player, state)
-        history[time] = state
         time += 1
+        state = action(agent_action(state, "random", control_player), control_player, state)
         #state = action(human_input(state), control_player, state)
+        history[time] = state
         render(state)
         if is_terminal_state(state):
             break
-        state = action(agent_action(state, "e-greedy", experiment_player, past_state=history[time-1]), experiment_player, state)
-        history[time] = state
         time += 1
+        #state = action(agent_action(state, "random", experiment_player), experiment_player, state)
+        state = action(agent_action(state, "e-greedy", experiment_player, past_state=history[time-2]), experiment_player, state)
+        history[time] = state
         render(state)
         game_over = is_terminal_state(state)
     if is_win(state, experiment_player):
@@ -140,6 +140,11 @@ for game in range(N_GAMES):
         experiment_losses += 1
     myprint("GAME OVER!")
     myprint(f"Winrate: {experiment_wins/(experiment_wins+experiment_losses)}")
-print(policy.values())
+vals = list(policy.values())
+print(vals)
+print(f"max val: {np.max(vals)}")
+print(f"min val: {np.min(vals)}")
+print(f"mean val: {np.mean(vals)}")
+print(f"median val: {np.median(vals)}")
 print(len(policy))
 print(f"Winrate: {experiment_wins/(experiment_wins+experiment_losses)}")
