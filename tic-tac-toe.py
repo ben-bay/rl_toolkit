@@ -106,21 +106,10 @@ def is_terminal_state(state):
     return is_win(state, 1) or is_win(state, 2) or (np.sum(np.where(state == 0)) == 0)
 
 def is_win(state, _id):
-    diags = list(zip(list(np.where(np.identity(3)==1)[0]), list(np.where(np.identity(3)==1)[1])))
-    diag_win = True
-    for diag in diags:
-        if state[diag] != _id:
-            diag_win = False
-            break
-    if diag_win:
+    if state[0,0] == _id and state[1,1] == _id and state[2,2] == _id:
         return True
-    diags = list(zip(list(np.where(np.rot90(np.identity(3))==1)[0]), list(np.where(np.rot90(np.identity(3))==1)[1])))
-    diag_win = True
-    for diag in diags:
-        if state[diag] != _id:
-            diag_win = False
-            break
-    if diag_win:
+
+    if state[0,2] == _id and state[1,1] == _id and state[2,0] == _id:
         return True
     
     return any((state[:]==[_id,_id,_id]).all(1)) or any((state.T[:]==[_id,_id,_id]).all(1))
@@ -129,12 +118,12 @@ state = np.zeros((3,3))
 states[state.tobytes()] = 0.5
 N_GAMES = 100
 for game in range(N_GAMES):
-    print(f"GAME {game+1}")
+    print(f"\nGAME {game+1}")
     state = np.zeros((3,3))
     game_over = False
     while not game_over:
-        state = action(agent_action(state, "random", control_player), control_player, state)
-        #state = action(human_input(state), control_player, state)
+        #state = action(agent_action(state, "random", control_player), control_player, state)
+        state = action(human_input(state), control_player, state)
         render(state)
         if is_terminal_state(state):
             break
