@@ -14,6 +14,7 @@ def e_greedy(epsilon, test_bed, n_timesteps):
     # with sample averages
     rewards = []
     action_values = np.zeros((len(test_bed)))
+    action_counts = np.zeros((len(test_bed)))
     for step in range(1, n_timesteps + 1):
         if random.random() > epsilon:
             action = np.argmax(action_values)
@@ -21,21 +22,11 @@ def e_greedy(epsilon, test_bed, n_timesteps):
             action = random.choice(list(range(len(action_values))))
         reward = do_action(action, test_bed)
         rewards.append(reward)
+        action_counts[action] += 1.0
         if step < n_timesteps - 1:
-            action_values[action] = action_values[action] + (1/float(step)) * (reward - action_values[action])
+            action_values[action] = action_values[action] + (1/action_counts[action]) * (reward - action_values[action])
     return rewards
 
-def greedy(test_bed, n_timesteps):
-    # with sample averages
-    rewards = []
-    action_values = np.zeros((len(test_bed)))
-    for step in range(1, n_timesteps + 1):
-        action = np.argmax(action_values)
-        reward = do_action(action, test_bed)
-        rewards.append(reward)
-        if step < n_timesteps - 1:
-            action_values[action] = action_values[action] + (1/float(step)) * (reward - action_values[action])
-    return rewards
 
 N_RUNS = 2000
 N_TIMESTEPS = 1000
@@ -44,7 +35,7 @@ two = np.ndarray((N_RUNS, N_TIMESTEPS))
 three = np.ndarray((N_RUNS, N_TIMESTEPS))
 for i in range(N_RUNS):
     test = testbed(10, 0, 1)
-    r1 = greedy(test, N_TIMESTEPS)
+    r1 = e_greedy(0, test, N_TIMESTEPS)
     r2 = e_greedy(0.1, test, N_TIMESTEPS)
     r3 = e_greedy(0.01, test, N_TIMESTEPS)
     one[i] = r1
