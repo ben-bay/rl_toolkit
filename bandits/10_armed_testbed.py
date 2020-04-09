@@ -27,20 +27,35 @@ def e_greedy(epsilon, test_bed, n_timesteps):
             action_values[action] = action_values[action] + (1/action_counts[action]) * (reward - action_values[action])
     return rewards
 
+def ucb(c, test_bed, n_timesteps):
+    rewards = []
+    action_values = np.zeros((len(test_bed)))
+    action_counts = np.zeros((len(test_bed)))
+    for step in range(1, n_timesteps + 1):
+        action = np.argmax(action_values + (c * np.sqrt(np.log(step) / action_counts)))
+        reward = do_action(action, test_bed)
+        rewards.append(reward)
+        action_counts[action] += 1.0
+        if step < n_timesteps - 1:
+            action_values[action] = action_values[action] + (1/action_counts[action]) * (reward - action_values[action])
+    return rewards
 
 N_RUNS = 2000
 N_TIMESTEPS = 1000
 one = np.ndarray((N_RUNS, N_TIMESTEPS))
 two = np.ndarray((N_RUNS, N_TIMESTEPS))
 three = np.ndarray((N_RUNS, N_TIMESTEPS))
+five = np.ndarray((N_RUNS, N_TIMESTEPS))
 for i in range(N_RUNS):
     test = testbed(10, 0, 1)
     r1 = e_greedy(0, test, N_TIMESTEPS)
     r2 = e_greedy(0.1, test, N_TIMESTEPS)
     r3 = e_greedy(0.01, test, N_TIMESTEPS)
+    r5 = ucb(2, test, N_TIMESTEPS)
     one[i] = r1
     two[i] = r2
     three[i] = r3
+    five[i] = r5
 
 
 fig, ax = plt.subplots()
@@ -48,6 +63,7 @@ fig, ax = plt.subplots()
 ax.plot(np.arange(N_TIMESTEPS), one.mean(axis=0), label=f"greedy")
 ax.plot(np.arange(N_TIMESTEPS), two.mean(axis=0), label=f"e = 0.1")
 ax.plot(np.arange(N_TIMESTEPS), three.mean(axis=0), label=f"e = 0.01")
+ax.plot(np.arange(N_TIMESTEPS), five.mean(axis=0), label=f"ucb c = 2")
         
 ax.legend()
 
