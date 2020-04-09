@@ -10,10 +10,10 @@ def testbed(n_arms, mean, variance):
 def do_action(a, testbed):
     return np.random.normal(testbed[a], 1)
 
-def e_greedy(epsilon, test_bed, n_timesteps):
+def e_greedy(epsilon, test_bed, n_timesteps, optimism=0):
     # with sample averages
     rewards = []
-    action_values = np.zeros((len(test_bed)))
+    action_values = np.zeros((len(test_bed))) + optimism
     action_counts = np.zeros((len(test_bed)))
     for step in range(1, n_timesteps + 1):
         if random.random() > epsilon:
@@ -40,12 +40,13 @@ def ucb(c, test_bed, n_timesteps):
             action_values[action] = action_values[action] + (1 / action_counts[action]) * (reward - action_values[action])
     return rewards
 
-N_ARMS = 10
-N_RUNS = 2000
+N_ARMS = 100
+N_RUNS = 1000
 N_TIMESTEPS = 1000
 one = np.ndarray((N_RUNS, N_TIMESTEPS))
 two = np.ndarray((N_RUNS, N_TIMESTEPS))
 three = np.ndarray((N_RUNS, N_TIMESTEPS))
+four = np.ndarray((N_RUNS, N_TIMESTEPS))
 five = np.ndarray((N_RUNS, N_TIMESTEPS))
 six = np.ndarray((N_RUNS, N_TIMESTEPS))
 for i in range(N_RUNS):
@@ -53,11 +54,13 @@ for i in range(N_RUNS):
     r1 = e_greedy(0, test, N_TIMESTEPS)
     r2 = e_greedy(0.1, test, N_TIMESTEPS)
     r3 = e_greedy(0.01, test, N_TIMESTEPS)
+    r4 = e_greedy(0, test, N_TIMESTEPS, optimism=5)
     r5 = ucb(2, test, N_TIMESTEPS)
     r6 = ucb(1, test, N_TIMESTEPS)
     one[i] = r1
     two[i] = r2
     three[i] = r3
+    four[i] = r4
     five[i] = r5
     six[i] = r6
 
@@ -67,6 +70,7 @@ fig, ax = plt.subplots()
 ax.plot(np.arange(N_TIMESTEPS), one.mean(axis=0), label=f"greedy")
 ax.plot(np.arange(N_TIMESTEPS), two.mean(axis=0), label=f"e=0.1")
 ax.plot(np.arange(N_TIMESTEPS), three.mean(axis=0), label=f"e=0.01")
+ax.plot(np.arange(N_TIMESTEPS), four.mean(axis=0), label=f"optimistic, e=0, o=5")
 ax.plot(np.arange(N_TIMESTEPS), five.mean(axis=0), label=f"ucb, c=2")
 ax.plot(np.arange(N_TIMESTEPS), six.mean(axis=0), label=f"ucb, c=1")
         
