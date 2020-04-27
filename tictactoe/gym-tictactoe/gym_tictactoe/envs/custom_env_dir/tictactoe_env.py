@@ -4,7 +4,7 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 
-import gym_tictactoe.envs.agent as agent
+import envs.custom_env_dir.agent as agent
 
 class TicTacToeEnv(gym.Env):
     metadata = {'render.modes': ['human','fast']}

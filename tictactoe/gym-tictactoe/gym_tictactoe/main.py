@@ -1,13 +1,12 @@
 import sys
-sys.path.append('/usr/local/lib/python3.7/site-packages')
+#sys.path.append('/usr/local/lib/python3.7/site-packages')
 
 import random
 
 import gym
-import gym_tictactoe
-import gym_tictactoe.envs
-from gym_tictactoe.envs.tictactoe_env import TicTacToeEnv
-import gym_tictactoe.envs.agent as agent
+import envs
+from envs.custom_env_dir.tictactoe_env import TicTacToeEnv
+import envs.custom_env_dir.agent as agent
 
 interactive = True
 control_player = 1
