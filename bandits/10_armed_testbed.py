@@ -2,6 +2,11 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
+"""
+> Add UCB
+> Add gradient algorithm
+> Add TS?
+"""
 
 def testbed(n_arms, mean, variance):
     action_values = np.random.normal(mean, variance, (1, n_arms))
@@ -10,10 +15,10 @@ def testbed(n_arms, mean, variance):
 def do_action(a, testbed):
     return np.random.normal(testbed[a], 1)
 
-def e_greedy(epsilon, test_bed, n_timesteps):
+def e_greedy(epsilon, test_bed, n_timesteps, optimism=0):
     # with sample averages
     rewards = []
-    action_values = np.zeros((len(test_bed)))
+    action_values = np.zeros((len(test_bed))) + optimism
     action_counts = np.zeros((len(test_bed)))
     for step in range(1, n_timesteps + 1):
         if random.random() > epsilon:
@@ -33,14 +38,17 @@ N_TIMESTEPS = 1000
 one = np.ndarray((N_RUNS, N_TIMESTEPS))
 two = np.ndarray((N_RUNS, N_TIMESTEPS))
 three = np.ndarray((N_RUNS, N_TIMESTEPS))
+four = np.ndarray((N_RUNS, N_TIMESTEPS))
 for i in range(N_RUNS):
     test = testbed(10, 0, 1)
     r1 = e_greedy(0, test, N_TIMESTEPS)
     r2 = e_greedy(0.1, test, N_TIMESTEPS)
     r3 = e_greedy(0.01, test, N_TIMESTEPS)
+    r4 = e_greedy(0, test, N_TIMESTEPS, optimism=10)
     one[i] = r1
     two[i] = r2
     three[i] = r3
+    four[i] = r4
 
 
 fig, ax = plt.subplots()
@@ -48,6 +56,7 @@ fig, ax = plt.subplots()
 ax.plot(np.arange(N_TIMESTEPS), one.mean(axis=0), label=f"greedy")
 ax.plot(np.arange(N_TIMESTEPS), two.mean(axis=0), label=f"e = 0.1")
 ax.plot(np.arange(N_TIMESTEPS), three.mean(axis=0), label=f"e = 0.01")
+ax.plot(np.arange(N_TIMESTEPS), four.mean(axis=0), label=f"optimistic")
         
 ax.legend()
 
