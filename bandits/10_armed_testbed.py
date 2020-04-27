@@ -2,6 +2,11 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
+"""
+> Add UCB
+> Add gradient algorithm
+> Add TS?
+"""
 
 def testbed(n_arms, mean, variance):
     action_values = np.random.normal(mean, variance, (1, n_arms))
