@@ -15,27 +15,31 @@ class TicTacToeEnv(gym.Env):
         self.state_history[self.time] = np.zeros((3,3))
         self.game_over = False
 
-        self.first_turn = None
-        self.second_turn = None
-        self.first_agent = None
-        self.second_agent = None
+        self.player1 = None
+        self.player2 = None
 
-    def init2(self, first_turn, second_turn, first_agent, second_agent):
-        self.first_turn = first_turn
-        self.second_turn = second_turn
-        self.first_agent = first_agent 
-        self.second_agent = second_agent
+    def init2(self, player1, player2):
+        self.player1 = player1
+        self.player2 = player2
+
+        # environment player goes first
+        self.time += 1
+        self.state_history[1] = np.zeros((3,3))
+        self.env_action(self.state_history[1])
 
     def step(self, action):
+        new_state = TicTacToeEnv.do_action(action, self.player2, self.state_history[self.time])
         self.time += 1
-        new_state = TicTacToeEnv.do_action(action, 2, self.state_history[self.time - 1])
         self.state_history[self.time] = new_state 
         if TicTacToeEnv.is_terminal_state(new_state):
             return
         self.render()
+        new_state = self.env_action(new_state) 
+        return new_state
+
+    def env_action(self, state):
+        new_state = TicTacToeEnv.do_action(agent.get_agent_action(self.state_history[self.time], self.player1, {}, past_state=self.state_history[self.time - 1]), self.player1, state)
         self.time += 1
-        #state = action(get_agent_action(self.state_history[self.time], "random", second_turn), second_turn, state)
-        new_state = TicTacToeEnv.do_action(agent.get_agent_action(self.state_history[self.time - 1], self.second_agent, self.second_turn, {}, self.second_turn, self.first_turn, past_state=self.state_history[self.time - 2]), self.second_turn, new_state)
         self.state_history[self.time] = new_state
         return new_state
 
@@ -60,9 +64,9 @@ class TicTacToeEnv(gym.Env):
             print("\n")
 
     @staticmethod
-    def do_action(square, player_id, pre_state):
+    def do_action(square, player, pre_state):
         result_state = np.copy(pre_state)
-        result_state[square] = player_id 
+        result_state[square] = player.id 
         return result_state
 
     @staticmethod
