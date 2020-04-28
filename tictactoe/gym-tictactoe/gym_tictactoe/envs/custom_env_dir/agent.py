@@ -15,10 +15,12 @@ def get_agent_action(state, current_player, policy, epsilon=0.1, past_state=None
         greedy_action, next_state = get_greedy_action(state, current_player, policy)
         add_new_state_to_policy(past_state, policy) # just in case
         if current_player.agent_type == "e-greedy":
+            #explore; no learning
             if random.random() <= epsilon:
                 return random.choice(get_available_actions(state)) #TODO can this be the highest value action?
+        #greedy
         if past_state is not None:
-            # temporal difference: update value of current state
+            # learn. temporal difference: update value of past state
             policy[past_state.tobytes()] = policy[past_state.tobytes()] + (step_size * (policy[next_state.tobytes()] - policy[past_state.tobytes()]))
         return greedy_action
 

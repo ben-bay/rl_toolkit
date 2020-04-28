@@ -27,18 +27,19 @@ class TicTacToeEnv(gym.Env):
         self.state_history[1] = np.zeros((3,3))
         self.env_action(self.state_history[1])
 
-    def step(self, action):
+    def step(self, action, policy):
         new_state = TicTacToeEnv.do_action(action, self.player2, self.state_history[self.time])
         self.time += 1
         self.state_history[self.time] = new_state 
+        agent.add_new_state_to_policy(new_state, policy)
         if TicTacToeEnv.is_terminal_state(new_state):
-            return
+            return new_state
         self.render()
         new_state = self.env_action(new_state) 
         return new_state
 
     def env_action(self, state):
-        new_state = TicTacToeEnv.do_action(agent.get_agent_action(self.state_history[self.time], self.player1, {}, past_state=self.state_history[self.time - 1]), self.player1, state)
+        new_state = TicTacToeEnv.do_action(agent.get_agent_action(self.state_history[self.time], self.player1, {}), self.player1, state)
         self.time += 1
         self.state_history[self.time] = new_state
         return new_state

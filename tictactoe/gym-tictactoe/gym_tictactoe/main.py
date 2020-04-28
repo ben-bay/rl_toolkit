@@ -8,7 +8,8 @@ import envs
 from envs.custom_env_dir.tictactoe_env import TicTacToeEnv
 import envs.custom_env_dir.agent as agent
 
-interactive = True
+interactive = False
+symbol_map = {1:"X",2:"O"}
 
 def myprint(string):
     if interactive:
@@ -47,26 +48,38 @@ def game(player_a, player_b, policy):
         experiment_player = player_a
     """
 
+    print(player1.agent_type + " " + symbol_map[player1.id] + " vs " + player2.agent_type + " " + symbol_map[player2.id])
+
     state = env.state_history[0]
     game_over = False
+    env.render()
     while not game_over:
-        action = agent.get_agent_action(state, player1, policy)
-        state = env.step(action)
+        action = agent.get_agent_action(state, player1, policy, past_state=env.state_history[env.time])
+        state = env.step(action, policy)
+        agent.add_new_state_to_policy(state, policy)
         env.render()
         if TicTacToeEnv.is_terminal_state(state):
             break
-    return state, TicTacToeEnv.is_win(state, experiment_player)
+    return state, TicTacToeEnv.is_win(state, experiment_player.id)
 
 def main():
     policy = {}
-    #experiment_wins = 0
-    #experiment_losses = 0
-    final_state, exp_won = game(Player(False, "random", False, 2), Player(True, "e-greedy", False, 2), policy)
-    #if exp_won:
-    #    experiment_wins += 1
-    #else:
-    #    experiment_losses += 1
-    myprint("GAME OVER!")
+    experiment_wins = 0
+    experiment_losses = 0
+    GAMES = 1000
+    for g in range(GAMES):
+        final_state, exp_won = game(Player(False, "random", False, 2), Player(True, "e-greedy", False, 2), policy)
+        myprint("GAME OVER!")
+        if exp_won:
+            experiment_wins += 1
+        else:
+            experiment_losses += 1
+        #print(len(policy))
+        #print(policy)
+    winrate = round(experiment_wins/(experiment_wins+experiment_losses)*100, 3)
+    print(f"Winrate: {winrate}%")
+    print(len(policy))
+    print(policy.values())
 
 if __name__ == "__main__":
     sys.exit(main())
