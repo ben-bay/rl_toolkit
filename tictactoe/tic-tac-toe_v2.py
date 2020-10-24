@@ -2,6 +2,8 @@ import numpy as np
 import random
 import sys
 from copy import deepcopy
+import os
+import pickle
 
 
 def is_full(board):
@@ -75,17 +77,20 @@ def get_greedy_action(state, player_id, value_function, maximize):
         candidate_actions = get_available_actions(state)
         if len(candidate_actions) == 0:
             return None, None
-        if maximize:
-            max_value = -np.inf
-        else:
-            max_value = np.inf
+        max_value = -np.inf
+        if not maximize:
+            max_value *= -1
         max_value_actions = [random.choice(candidate_actions)]
         max_value_states = [np.copy(state)]
         for candidate_action in candidate_actions:
             candidate_state = np.copy(state)
             candidate_state[candidate_action] = player_id
-            #print(candidate_state)
             value = value_function[candidate_state.tobytes()]
+            # stochastic action decision
+            if value == max_value:
+                max_value_actions.append(candidate_action)
+                max_value_states.append(candidate_state)
+
             if maximize:
                 if value > max_value:
                     max_value = value
@@ -97,10 +102,6 @@ def get_greedy_action(state, player_id, value_function, maximize):
                     max_value_actions = [candidate_action]
                     max_value_states = [candidate_state]
 
-            # stochastic action decision
-            #elif value == max_value:
-            #    max_value_actions.append(candidate_action)
-            #    max_value_states.append(candidate_state)
         index = random.choice(range(len(max_value_actions)))
         return max_value_actions[index], max_value_states[index]
 
@@ -115,6 +116,7 @@ class AutonomousAgent(Agent):
     def __init__(self, _id, is_learning=False):
         super().__init__(_id)
         self.is_learning = is_learning
+        self.stochastic = True
 
 class Human(Agent):
     def __init__(self, _id):
@@ -151,7 +153,7 @@ class Greedy(AutonomousAgent):
         return result_value_function
 
 class E_greedy(Greedy):
-    def __init__(self, _id, step_size=0.1, e=0.1, is_learning=True):
+    def __init__(self, _id, step_size=0.1, e=0.5, is_learning=True):
         super().__init__(_id, step_size, is_learning)
         self.epsilon = e
 
@@ -169,14 +171,28 @@ def train_value_function():
     print(f"std state value = {np.std(values)}")
     o_value_function = deepcopy(value_function)
     x_value_function = deepcopy(value_function)
-    for i in range(1000):
+    for i in range(10000):
         x_value_function, o_value_function = game(Random(1), E_greedy(2), x_value_function, o_value_function)
+    for i in range(10000):
+        o_value_function, x_value_function = game(E_greedy(1), Random(2), o_value_function, x_value_function)
     values = list(o_value_function.values())
     print(set(values))
     print(f"mean state value = {np.mean(values)}")
     print(f"std state value = {np.std(values)}")
+    pickle.dump(o_value_function, open("value_function.pkl", "wb"))
     return o_value_function
 
+def render_state(state):
+    for i in range(3):
+        for j in range(3):
+            cell = state[i,j]
+            if cell == 0:
+                print(".", end=" ")
+            if cell == 1:
+                print("X", end=" ")
+            if cell == 2:
+                print("O", end=" ")
+        print("")
 
 def game(x_player, o_player, x_value_function, o_value_function, render=False):
     state = np.zeros((3,3))
@@ -187,11 +203,10 @@ def game(x_player, o_player, x_value_function, o_value_function, render=False):
         x_action = x_player.get_action(state, x_value_function)
         state[x_action] = x_player.id
         if render:
-            print(state)
+            render_state(state)
         if iteration > 0:
             x_value_function = x_player.update_value_function(state, x_past_state, x_value_function)
         x_past_state = np.copy(state)
-        #print(state)
         #if is_terminal(state) and x_player.is_learning:
         #    x_value_function = x_player.update_value_function(state, x_past_state, x_value_function)
         if is_terminal(state):
@@ -199,7 +214,7 @@ def game(x_player, o_player, x_value_function, o_value_function, render=False):
         o_action = o_player.get_action(state, o_value_function)
         state[o_action] = o_player.id
         if render:
-            print(state)
+            render_state(state)
         #if is_terminal(state):
         #    print("O wins")
         #    print(o_past_state)
@@ -212,20 +227,23 @@ def game(x_player, o_player, x_value_function, o_value_function, render=False):
         #    sys.exit()
         o_value_function = o_player.update_value_function(state, o_past_state, o_value_function)
         o_past_state = np.copy(state)
-        #print(state)
         #if is_terminal(state) and o_player.is_learning:
         #    o_value_function = o_player.update_value_function(state, o_past_state, o_value_function)
         #    break
         iteration += 1
     return x_value_function, o_value_function
-    
+
 def main():
-    value_function = train_value_function()
-    game(E_greedy(1), Human(2), deepcopy(value_function), deepcopy(value_function), render=True)
+    if os.path.exists("value_function.pkl"):
+        value_function = pickle.load(open("value_function.pkl", "rb"))
+    else:
+        value_function = train_value_function()
+    game(Greedy(1), Human(2), deepcopy(value_function), deepcopy(value_function), render=True)
     #value_table = init_value_table()
     #print(f"number of states (should be 5478): {len(value_table)}")
     #print(f"value_table state values: {set(value_table.values())}")
 
+# player 1 wants to maximize, player 2 wants to minimize
 
 if __name__ == "__main__":
     sys.exit(main())
