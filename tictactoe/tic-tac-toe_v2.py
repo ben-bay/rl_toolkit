@@ -6,6 +6,9 @@ import os
 import pickle
 
 
+def is_tie(board):
+    return (is_full(board)) and (not is_win(board, 1)) and (is_win(board, 2))
+
 def is_full(board):
     return not board.__contains__(0)
 
@@ -85,7 +88,7 @@ def get_greedy_action(state, player_id, value_function, maximize):
             return None, None
         max_value = -np.inf
         if not maximize:
-            max_value *= -1
+            max_value *= -1	
         max_value_actions = [random.choice(candidate_actions)]
         max_value_states = [np.copy(state)]
         for candidate_action in candidate_actions:
@@ -96,8 +99,7 @@ def get_greedy_action(state, player_id, value_function, maximize):
             if value == max_value:
                 max_value_actions.append(candidate_action)
                 max_value_states.append(candidate_state)
-
-            if maximize:
+            elif maximize:
                 if value > max_value:
                     max_value = value
                     max_value_actions = [candidate_action]
@@ -172,10 +174,19 @@ def train_value_function(n_games=100):
     print(f"number of distinct state values = {len(set(values))}")
     o_value_function = deepcopy(value_function)
     x_value_function = deepcopy(value_function)
+
+    # train vs Random
     for i in range(n_games):
         x_value_function, o_value_function, _ = game(Random(1), E_greedy(2), x_value_function, o_value_function)
     for i in range(n_games):
         x_value_function, o_value_function, _ = game(E_greedy(1), Random(2), x_value_function, o_value_function)
+
+    # train vs E_greedy (e = 0.5)
+    for i in range(n_games):
+        x_value_function, o_value_function, _ = game(E_greedy(1,0,0.5,False), E_greedy(2), x_value_function, o_value_function)
+    for i in range(n_games):
+        x_value_function, o_value_function, _ = game(E_greedy(1), E_greedy(2,0,0.5,False), x_value_function, o_value_function)
+    
     result_value_function = {**x_value_function, **o_value_function}
     values = list(result_value_function.values())
     print(set(values))
@@ -208,45 +219,36 @@ def game(x_player, o_player, x_value_function, o_value_function, render=False):
         if iteration > 0:
             x_value_function = x_player.update_value_function(state, x_past_state, x_value_function)
         x_past_state = np.copy(state)
-        #if is_terminal(state) and x_player.is_learning:
-        #    x_value_function = x_player.update_value_function(state, x_past_state, x_value_function)
+        end_code = 1
+        if is_tie(state):
+            end_code = 0
         if is_terminal(state):
-            return x_value_function, o_value_function, True
+            return x_value_function, o_value_function, end_code
         o_action = o_player.get_action(state, o_value_function)
         state[o_action] = o_player.id
         if render:
             render_state(state)
-        #if is_terminal(state):
-        #    print("O wins")
-        #    print(o_past_state)
-        #    print(o_value_function[o_past_state.tobytes()])
-        #    print(state)
-        #    print(o_value_function[state.tobytes()])
-        #    o_value_function = o_player.update_value_function(state, o_past_state, o_value_function)
-        #    print(o_value_function[o_past_state.tobytes()])
-        #    print(o_player.is_learning)
-        #    sys.exit()
         o_value_function = o_player.update_value_function(state, o_past_state, o_value_function)
         o_past_state = np.copy(state)
-        #if is_terminal(state) and o_player.is_learning:
-        #    o_value_function = o_player.update_value_function(state, o_past_state, o_value_function)
-        #    break
-        iteration += 1
+        end_code = 2
+        if is_tie(state):
+            end_code = 0
         if is_terminal(state):
-            return x_value_function, o_value_function, False
+            return x_value_function, o_value_function, end_code
+        iteration += 1
 
 def agent_trial(value_function):
     wins = 0
     games = 0
     for i in range(100):
-        _, _, x_victory = game(Greedy(1), Random(2), deepcopy(value_function), deepcopy(value_function))
+        _, _, end_code = game(Greedy(1), Random(2), deepcopy(value_function), deepcopy(value_function))
         games += 1
-        if x_victory:
+        if end_code == 1:
             wins += 1
     for i in range(100):
-        _, _, x_victory = game(Random(1), Greedy(2), deepcopy(value_function), deepcopy(value_function))
+        _, _, end_code = game(Random(1), Greedy(2), deepcopy(value_function), deepcopy(value_function))
         games += 1
-        if not x_victory:
+        if end_code == 2:
             wins += 1
     ratio = wins / float(games) * 100
     print(f"Won {ratio}% against random agent")
@@ -261,7 +263,7 @@ def main():
     if os.path.exists("value_function.pkl"):
         value_function = pickle.load(open("value_function.pkl", "rb"))
     else:
-        value_function = train_value_function(10000)
+        value_function = train_value_function(100)
     agent_trial(value_function)    
 
     #game(Greedy(1), Human(2), deepcopy(value_function), deepcopy(value_function), render=True)
