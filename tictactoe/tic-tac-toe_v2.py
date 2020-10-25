@@ -51,8 +51,10 @@ def o_move(board, state_values):
             if board.tobytes() in state_values:
                 board[move] = 0
                 continue
-            elif is_win(board, 2) or is_full(board):
+            elif is_win(board, 2):
                 state_values[board.tobytes()] = 0.0
+            elif is_full(board):
+                state_values[board.tobytes()] = 1.0 # should this be 0? Unsure.
             else:
                 state_values[board.tobytes()] = 0.5
                 state_values = x_move(board, state_values)
@@ -63,6 +65,11 @@ def get_random_value_function():
     value_function = init_value_table()
     for k,v in deepcopy(value_function).items():
         value_function[k] = random.random()
+    return value_function
+
+def reverse_value_function(value_function):
+    for k,v in deepcopy(value_function).items():
+        value_function[k] = 1.0 - value_function[k]
     return value_function
 
 def init_value_table():
@@ -170,8 +177,8 @@ class E_greedy(Greedy):
 def train_value_function(n_games=100): 
     value_function = init_value_table()
     values = list(value_function.values())
-    print(set(values))
-    print(f"number of distinct state values = {len(set(values))}")
+    #print(set(values))
+    #print(f"number of distinct state values = {len(set(values))}")
     o_value_function = deepcopy(value_function)
     x_value_function = deepcopy(value_function)
 
@@ -189,8 +196,8 @@ def train_value_function(n_games=100):
     
     result_value_function = {**x_value_function, **o_value_function}
     values = list(result_value_function.values())
-    print(set(values))
-    print(f"number of distinct state values = {len(set(values))}")
+    #print(set(values))
+    #print(f"number of distinct state values = {len(set(values))}")
     pickle.dump(result_value_function, open("value_function.pkl", "wb"))
     return result_value_function
 
@@ -205,6 +212,7 @@ def render_state(state):
             if cell == 2:
                 print("O", end=" ")
         print("")
+    print("")
 
 def game(x_player, o_player, x_value_function, o_value_function, render=False):
     state = np.zeros((3,3))
@@ -254,19 +262,26 @@ def agent_trial(value_function):
     print(f"Won {ratio}% against random agent")
 
 def main():
+    print("Random value function:", end="\n\t")
     value_function = get_random_value_function()
     agent_trial(value_function)    
 
+    print("Basic value function:", end="\n\t")
     value_function = init_value_table()
     agent_trial(value_function)    
 
     if os.path.exists("value_function.pkl"):
         value_function = pickle.load(open("value_function.pkl", "rb"))
     else:
-        value_function = train_value_function(100)
+        value_function = train_value_function(1000)
+
+    print("Bad value function:", end="\n\t")
+    agent_trial(reverse_value_function(deepcopy(value_function)))    
+
+    print("Trained value function:", end="\n\t")
     agent_trial(value_function)    
 
-    #game(Greedy(1), Human(2), deepcopy(value_function), deepcopy(value_function), render=True)
+    game(Greedy(1), Human(2), deepcopy(value_function), deepcopy(value_function), render=True)
     #value_table = init_value_table()
     #print(f"number of states (should be 5478): {len(value_table)}")
     #print(f"value_table state values: {set(value_table.values())}")
