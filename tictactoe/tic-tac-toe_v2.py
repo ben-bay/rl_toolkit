@@ -56,6 +56,12 @@ def o_move(board, state_values):
             board[move] = 0
     return state_values
 
+def get_random_value_function():
+    value_function = init_value_table()
+    for k,v in deepcopy(value_function).items():
+        value_function[k] = random.random()
+    return value_function
+
 def init_value_table():
     board = np.zeros((3,3))
     state_values = x_move(board, {board.tobytes(): 0.5})
@@ -142,18 +148,14 @@ class Greedy(AutonomousAgent):
         return greedy_action
 
     def update_value_function(self, state, past_state, value_function):
-        if value_function is None:
-            raise ValueError("value_function is None")
         result_value_function = deepcopy(value_function)
         if past_state is not None and self.is_learning:
-            # temporal difference: update value of current state
+            # temporal difference: update value of previous state based on current state
             result_value_function[past_state.tobytes()] = result_value_function[past_state.tobytes()] + (self.step_size * (result_value_function[state.tobytes()] - result_value_function[past_state.tobytes()]))
-        if result_value_function is None:
-            raise ValueError("value_function is None")
         return result_value_function
 
 class E_greedy(Greedy):
-    def __init__(self, _id, step_size=0.1, e=0.5, is_learning=True):
+    def __init__(self, _id, step_size=0.1, e=0.2, is_learning=True):
         super().__init__(_id, step_size, is_learning)
         self.epsilon = e
 
@@ -163,24 +165,23 @@ class E_greedy(Greedy):
         else:
             return super().get_action(state, value_function)
 
-def train_value_function(): 
+def train_value_function(n_games=100): 
     value_function = init_value_table()
     values = list(value_function.values())
     print(set(values))
-    print(f"mean state value = {np.mean(values)}")
-    print(f"std state value = {np.std(values)}")
+    print(f"number of distinct state values = {len(set(values))}")
     o_value_function = deepcopy(value_function)
     x_value_function = deepcopy(value_function)
-    for i in range(10000):
-        x_value_function, o_value_function = game(Random(1), E_greedy(2), x_value_function, o_value_function)
-    for i in range(10000):
-        o_value_function, x_value_function = game(E_greedy(1), Random(2), o_value_function, x_value_function)
-    values = list(o_value_function.values())
+    for i in range(n_games):
+        x_value_function, o_value_function, _ = game(Random(1), E_greedy(2), x_value_function, o_value_function)
+    for i in range(n_games):
+        x_value_function, o_value_function, _ = game(E_greedy(1), Random(2), x_value_function, o_value_function)
+    result_value_function = {**x_value_function, **o_value_function}
+    values = list(result_value_function.values())
     print(set(values))
-    print(f"mean state value = {np.mean(values)}")
-    print(f"std state value = {np.std(values)}")
-    pickle.dump(o_value_function, open("value_function.pkl", "wb"))
-    return o_value_function
+    print(f"number of distinct state values = {len(set(values))}")
+    pickle.dump(result_value_function, open("value_function.pkl", "wb"))
+    return result_value_function
 
 def render_state(state):
     for i in range(3):
@@ -210,7 +211,7 @@ def game(x_player, o_player, x_value_function, o_value_function, render=False):
         #if is_terminal(state) and x_player.is_learning:
         #    x_value_function = x_player.update_value_function(state, x_past_state, x_value_function)
         if is_terminal(state):
-            break
+            return x_value_function, o_value_function, True
         o_action = o_player.get_action(state, o_value_function)
         state[o_action] = o_player.id
         if render:
@@ -231,14 +232,39 @@ def game(x_player, o_player, x_value_function, o_value_function, render=False):
         #    o_value_function = o_player.update_value_function(state, o_past_state, o_value_function)
         #    break
         iteration += 1
-    return x_value_function, o_value_function
+        if is_terminal(state):
+            return x_value_function, o_value_function, False
+
+def agent_trial(value_function):
+    wins = 0
+    games = 0
+    for i in range(100):
+        _, _, x_victory = game(Greedy(1), Random(2), deepcopy(value_function), deepcopy(value_function))
+        games += 1
+        if x_victory:
+            wins += 1
+    for i in range(100):
+        _, _, x_victory = game(Random(1), Greedy(2), deepcopy(value_function), deepcopy(value_function))
+        games += 1
+        if not x_victory:
+            wins += 1
+    ratio = wins / float(games) * 100
+    print(f"Won {ratio}% against random agent")
 
 def main():
+    value_function = get_random_value_function()
+    agent_trial(value_function)    
+
+    value_function = init_value_table()
+    agent_trial(value_function)    
+
     if os.path.exists("value_function.pkl"):
         value_function = pickle.load(open("value_function.pkl", "rb"))
     else:
-        value_function = train_value_function()
-    game(Greedy(1), Human(2), deepcopy(value_function), deepcopy(value_function), render=True)
+        value_function = train_value_function(10000)
+    agent_trial(value_function)    
+
+    #game(Greedy(1), Human(2), deepcopy(value_function), deepcopy(value_function), render=True)
     #value_table = init_value_table()
     #print(f"number of states (should be 5478): {len(value_table)}")
     #print(f"value_table state values: {set(value_table.values())}")
