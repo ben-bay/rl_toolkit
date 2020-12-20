@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 """
-> Add gradient algorithm
+TODO
+> Fix gradient algorithm
 > Add Thompson sampling
 """
 
