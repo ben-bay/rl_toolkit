@@ -20,7 +20,7 @@ def do_action(a, testbed):
     return np.random.normal(testbed[a], 1)
 
 
-def e_greedy(epsilon, test_bed, n_timesteps, optimism=0):
+def e_greedy(test_bed, n_timesteps, epsilon=0, optimism=0):
     # with sample averages
     rewards = []
     action_values = np.zeros((len(test_bed))) + optimism
@@ -40,7 +40,7 @@ def e_greedy(epsilon, test_bed, n_timesteps, optimism=0):
     return rewards
 
 
-def ucb(c, test_bed, n_timesteps):
+def ucb(test_bed, n_timesteps, c):
     rewards = []
     action_values = np.zeros((len(test_bed)))
     action_counts = np.zeros((len(test_bed)))
@@ -56,7 +56,7 @@ def ucb(c, test_bed, n_timesteps):
     return rewards
 
 
-def gradient(step_size, test_bed, n_timesteps, baseline=True):
+def gradient(test_bed, n_timesteps, step_size, baseline=True):
     rewards = []
     action_preferences = np.zeros((len(test_bed)))
     action_counts = np.zeros((len(test_bed)))
@@ -97,32 +97,36 @@ def process_args(args):
     n_arms = args.narms
     n_runs = args.nruns
     n_timesteps = args.ntimesteps
+    alg_specs = []
+    # algortihm tuple: function, plot label, kwargs
+    alg_specs.append((e_greedy, "greedy", {}))
+    alg_specs.append((e_greedy, "greedy e=0.1", {"epsilon": 0.1}))
+    alg_specs.append((e_greedy, "greedy e=0.01", {"epsilon": 0.01}))
+    alg_specs.append((e_greedy, "optimistic, e=0, o=5", {"optimism": 5}))
+    alg_specs.append((ucb, "ucb, c=2", {"c": 2}))
+    alg_specs.append((ucb, "ucb, c=1", {"c": 1}))
+    # alg_specs.append((gradient, "gradient, alpha=100", {"step_size": 100}))
+    n_algs = len(alg_specs)
     algorithm_runs = []
-    for i in range(6):
+    for i in range(n_algs):
         algorithm_runs.append(np.ndarray((n_runs, n_timesteps)))
-    # seven = np.ndarray((n_runs, n_timesteps))
     for run_i in range(n_runs):
         test = testbed(n_arms, args.mean, args.variance)
         rewards = []
-        rewards.append(e_greedy(0, test, n_timesteps))
-        rewards.append(e_greedy(0.1, test, n_timesteps))
-        rewards.append(e_greedy(0.01, test, n_timesteps))
-        rewards.append(e_greedy(0, test, n_timesteps, optimism=5))
-        rewards.append(ucb(2, test, n_timesteps))
-        rewards.append(ucb(1, test, n_timesteps))
-        # r7 = gradient(100, test, n_timesteps)
-        for alg_i in range(len(algorithm_runs)):
+        for alg_i in range(n_algs):
+            alg = alg_specs[alg_i]
+            rewards.append(alg[0](test, n_timesteps, **alg[2]))
+        for alg_i in range(n_algs):
             algorithm_runs[alg_i][run_i] = rewards[alg_i]
 
     fig, ax = plt.subplots()
 
-    ax.plot(np.arange(n_timesteps), algorithm_runs[0].mean(axis=0), label=f"greedy")
-    ax.plot(np.arange(n_timesteps), algorithm_runs[1].mean(axis=0), label=f"e=0.1")
-    ax.plot(np.arange(n_timesteps), algorithm_runs[2].mean(axis=0), label=f"e=0.01")
-    ax.plot(np.arange(n_timesteps), algorithm_runs[3].mean(axis=0), label=f"optimistic, e=0, o=5")
-    ax.plot(np.arange(n_timesteps), algorithm_runs[4].mean(axis=0), label=f"ucb, c=2")
-    ax.plot(np.arange(n_timesteps), algorithm_runs[5].mean(axis=0), label=f"ucb, c=1")
-    # ax.plot(np.arange(n_timesteps), seven.mean(axis=0), label=f"gradient, alpha=100")
+    for alg_i in range(n_algs):
+        ax.plot(
+            np.arange(n_timesteps),
+            algorithm_runs[alg_i].mean(axis=0),
+            label=alg_specs[alg_i][1],
+        )
 
     ax.legend()
 
