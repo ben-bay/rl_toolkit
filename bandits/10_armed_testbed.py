@@ -7,7 +7,7 @@ import numpy as np
 
 """
 > Add gradient algorithm
-> Add TS?
+> Add Thompson sampling
 """
 
 
@@ -105,7 +105,7 @@ def process_args(args):
     six = np.ndarray((n_runs, n_timesteps))
     # seven = np.ndarray((n_runs, n_timesteps))
     for i in range(n_runs):
-        test = testbed(n_arms, 0, 1)
+        test = testbed(n_arms, args.mean, args.variance)
         r1 = e_greedy(0, test, n_timesteps)
         r2 = e_greedy(0.1, test, n_timesteps)
         r3 = e_greedy(0.01, test, n_timesteps)
@@ -141,7 +141,9 @@ def process_args(args):
 
 
 def setup_argparse():
-    parser = argparse.ArgumentParser(description="Description of the program here")
+    parser = argparse.ArgumentParser(
+        description='Run simple exploration algorithms on the toy multi-armed bandit problem "10-armed testbed"'
+    )
     parser.add_argument(
         "--narms", action="store", type=int, help="Number of arms", default=10
     )
