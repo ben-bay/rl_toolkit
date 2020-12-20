@@ -134,7 +134,7 @@ def process_args(args):
     ax.set(xlabel="steps", ylabel="average reward")
     ax.grid()
 
-    fig.savefig(f"bandits_k{n_arms}_{n_runs}runs.png")
+    fig.savefig(f"bandits_k{n_arms}_{n_runs}runs.png", dpi=300)
     plt.show()
 
 
