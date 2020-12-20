@@ -97,38 +97,31 @@ def process_args(args):
     n_arms = args.narms
     n_runs = args.nruns
     n_timesteps = args.ntimesteps
-    one = np.ndarray((n_runs, n_timesteps))
-    two = np.ndarray((n_runs, n_timesteps))
-    three = np.ndarray((n_runs, n_timesteps))
-    four = np.ndarray((n_runs, n_timesteps))
-    five = np.ndarray((n_runs, n_timesteps))
-    six = np.ndarray((n_runs, n_timesteps))
+    algorithm_runs = []
+    for i in range(6):
+        algorithm_runs.append(np.ndarray((n_runs, n_timesteps)))
     # seven = np.ndarray((n_runs, n_timesteps))
-    for i in range(n_runs):
+    for run_i in range(n_runs):
         test = testbed(n_arms, args.mean, args.variance)
-        r1 = e_greedy(0, test, n_timesteps)
-        r2 = e_greedy(0.1, test, n_timesteps)
-        r3 = e_greedy(0.01, test, n_timesteps)
-        r4 = e_greedy(0, test, n_timesteps, optimism=5)
-        r5 = ucb(2, test, n_timesteps)
-        r6 = ucb(1, test, n_timesteps)
+        rewards = []
+        rewards.append(e_greedy(0, test, n_timesteps))
+        rewards.append(e_greedy(0.1, test, n_timesteps))
+        rewards.append(e_greedy(0.01, test, n_timesteps))
+        rewards.append(e_greedy(0, test, n_timesteps, optimism=5))
+        rewards.append(ucb(2, test, n_timesteps))
+        rewards.append(ucb(1, test, n_timesteps))
         # r7 = gradient(100, test, n_timesteps)
-        one[i] = r1
-        two[i] = r2
-        three[i] = r3
-        four[i] = r4
-        five[i] = r5
-        six[i] = r6
-        # seven[i] = r7
+        for alg_i in range(len(algorithm_runs)):
+            algorithm_runs[alg_i][run_i] = rewards[alg_i]
 
     fig, ax = plt.subplots()
 
-    ax.plot(np.arange(n_timesteps), one.mean(axis=0), label=f"greedy")
-    ax.plot(np.arange(n_timesteps), two.mean(axis=0), label=f"e=0.1")
-    ax.plot(np.arange(n_timesteps), three.mean(axis=0), label=f"e=0.01")
-    ax.plot(np.arange(n_timesteps), four.mean(axis=0), label=f"optimistic, e=0, o=5")
-    ax.plot(np.arange(n_timesteps), five.mean(axis=0), label=f"ucb, c=2")
-    ax.plot(np.arange(n_timesteps), six.mean(axis=0), label=f"ucb, c=1")
+    ax.plot(np.arange(n_timesteps), algorithm_runs[0].mean(axis=0), label=f"greedy")
+    ax.plot(np.arange(n_timesteps), algorithm_runs[1].mean(axis=0), label=f"e=0.1")
+    ax.plot(np.arange(n_timesteps), algorithm_runs[2].mean(axis=0), label=f"e=0.01")
+    ax.plot(np.arange(n_timesteps), algorithm_runs[3].mean(axis=0), label=f"optimistic, e=0, o=5")
+    ax.plot(np.arange(n_timesteps), algorithm_runs[4].mean(axis=0), label=f"ucb, c=2")
+    ax.plot(np.arange(n_timesteps), algorithm_runs[5].mean(axis=0), label=f"ucb, c=1")
     # ax.plot(np.arange(n_timesteps), seven.mean(axis=0), label=f"gradient, alpha=100")
 
     ax.legend()
