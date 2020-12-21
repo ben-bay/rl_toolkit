@@ -108,17 +108,17 @@ def thompson_sampling(test_bed, horizon):
         # update counts pulled for chosen arm
         counts[chosen_arm] = counts[chosen_arm] + 1
         n = counts[chosen_arm]
-        
+
         # Update average/mean value/reward for chosen arm
         value = values[chosen_arm]
         new_value = ((n - 1) / float(n)) * value + (1 / float(n)) * reward
         values[chosen_arm] = new_value
-        
-        # Update a and b... 
+
+        # Update a and b...
         # a is based on total counts of rewards of arm
         a[chosen_arm] = a[chosen_arm] + reward
         # b is based on total counts of failed rewards on arm
-        b[chosen_arm] = b[chosen_arm] + (1-reward)        
+        b[chosen_arm] = b[chosen_arm] + (1 - reward)
         return counts, values, a, b
 
     n_arms = len(test_bed)
@@ -126,7 +126,6 @@ def thompson_sampling(test_bed, horizon):
     values = np.zeros(n_arms)
     a = np.ones(n_arms)
     b = np.ones(n_arms)
-
 
 
 def process_args(args):
