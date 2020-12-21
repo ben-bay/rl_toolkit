@@ -150,7 +150,7 @@ def process_args(args):
     alg_specs.append((e_greedy, "optimistic: e=0, o=5", {"optimism": 5}))
     alg_specs.append((ucb, "ucb: c=2", {"c": 2}))
     alg_specs.append((ucb, "ucb: c=1", {"c": 1}))
-    alg_specs.append((thompson_sampling, "ts: a=1, b=1", {"a":1, "b":1}))
+    # alg_specs.append((thompson_sampling, "ts: a=1, b=1", {"a":1, "b":1}))
     # alg_specs.append((gradient, "gradient, alpha=100", {"step_size": 100}))
     n_algs = len(alg_specs)
     algorithm_runs = []
