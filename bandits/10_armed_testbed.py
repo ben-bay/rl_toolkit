@@ -95,11 +95,13 @@ def gradient(test_bed, horizon, step_size, baseline=True):
     return rewards
 
 
-def thompson_sampling(test_bed, horizon):
-    def select_arm(a, b, beta_params):
-        beta_params = zip(a, b)
+def thompson_sampling(test_bed, horizon, a=1, b=1):
+    def select_arm(a, b):
+        beta_params = list(zip(a, b))
+        print(list(beta_params))
         # Perform random draw for all arms based on their params (a,b)
         all_draws = [beta.rvs(i[0], i[1], size=1) for i in beta_params]
+        print(all_draws)
         # return index of arm with the highest draw
         return all_draws.index(max(all_draws))
 
@@ -124,8 +126,16 @@ def thompson_sampling(test_bed, horizon):
     n_arms = len(test_bed)
     counts = np.zeros(n_arms)
     values = np.zeros(n_arms)
-    a = np.ones(n_arms)
-    b = np.ones(n_arms)
+    a = np.ones(n_arms) * a
+    b = np.ones(n_arms) * b
+    rewards = []
+    for timestep in range(1, horizon + 1):
+        chosen_arm = select_arm(a, b)
+        reward = do_action(chosen_arm, test_bed)
+        print(reward)
+        rewards.append(reward)
+        counts, values, a, b = update(counts, values, a, b, chosen_arm, reward)
+    return rewards
 
 
 def process_args(args):
@@ -135,11 +145,12 @@ def process_args(args):
     alg_specs = []
     # algortihm tuple: function, plot label, kwargs
     alg_specs.append((e_greedy, "greedy", {}))
-    alg_specs.append((e_greedy, "greedy e=0.1", {"epsilon": 0.1}))
-    alg_specs.append((e_greedy, "greedy e=0.01", {"epsilon": 0.01}))
-    alg_specs.append((e_greedy, "optimistic, e=0, o=5", {"optimism": 5}))
-    alg_specs.append((ucb, "ucb, c=2", {"c": 2}))
-    alg_specs.append((ucb, "ucb, c=1", {"c": 1}))
+    alg_specs.append((e_greedy, "greedy: e=0.1", {"epsilon": 0.1}))
+    alg_specs.append((e_greedy, "greedy: e=0.01", {"epsilon": 0.01}))
+    alg_specs.append((e_greedy, "optimistic: e=0, o=5", {"optimism": 5}))
+    alg_specs.append((ucb, "ucb: c=2", {"c": 2}))
+    alg_specs.append((ucb, "ucb: c=1", {"c": 1}))
+    alg_specs.append((thompson_sampling, "ts: a=1, b=1", {"a":1, "b":1}))
     # alg_specs.append((gradient, "gradient, alpha=100", {"step_size": 100}))
     n_algs = len(alg_specs)
     algorithm_runs = []
@@ -168,7 +179,7 @@ def process_args(args):
     ax.set(xlabel="steps", ylabel="average reward")
     ax.grid()
 
-    fig.savefig(f"bandits_k{n_arms}_{n_runs}runs.png", dpi=300)
+    fig.savefig(f"bandits_k{n_arms}_{n_runs}_runs.png", dpi=300)
     plt.show()
 
 
